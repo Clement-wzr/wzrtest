@@ -6,20 +6,20 @@
 <meta name="theme-color" content="#02070b" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23030d0e'/%3E%3Cpath d='M16 5.5c.7 6.7 2.3 8.3 9 9-6.7.7-8.3 2.3-9 9-.7-6.7-2.3-8.3-9-9 6.7-.7 8.3-2.3 9-9Z' fill='%23d9bb83'/%3E%3C/svg%3E" />
 <title>EVERGREEN · 手势粒子圣诞树</title>
-<meta name="description" content="一棵会回应掌心的粒子圣诞树。握拳凝聚，张开星散，挥手随行；张开手掌看散落的照片，比 OK 放大居中的一张，竖起大拇指打开一封来信。" />
+<meta name="description" content="一棵会回应掌心的粒子圣诞树。握拳凝聚，张开化为环绕光球，挥手随行；九张照片贴在光球正面，比 OK 原地放大掌心准星指向的一张，比耶打开一封来信。" />
 <!--
   使用说明
   1. 摄像头功能需要通过 http://localhost 或 HTTPS 打开；直接双击文件时浏览器可能拒绝摄像头。
      推荐解压后双击同目录下的 start-server.bat，会自动打开浏览器。
      也可以在本目录执行:  python serve.py
      然后访问:          http://127.0.0.1:8000/
-  2. 点击右上角「开启手势」并允许摄像头。握拳 = 圣诞树完整，张开手掌 = 粒子与照片散开，
-     手掌左右挥动 = 粒子与照片随掌心移动。
-  3. 照片在星屑中分散漂浮；把想看的照片移到画面中间，比 OK 手势可放大该照片。
-  4. 竖起大拇指，会打开一封黑底白字的来信；来信会逐字出现，
-     并用一整页展示「天天开心，期末必过」。按 O 也可直接预览来信，Esc 或右上角 × 返回。
+  2. 点击右上角「开启手势」并允许摄像头。握拳 = 圣诞树完整，张开手掌 = 所有粒子聚成环绕光球，
+     九张照片贴在光球正面；手掌左右挥动 = 光球与照片随掌心移动。
+  3. 照片固定在球体正面并始终面向你，不随球体自转；十字准星跟随掌心，移动准星对准一张照片，比 OK 手势会在准星处放大该照片。
+  4. 比耶，会打开一封黑底白字的来信；来信会逐字出现，
+     并用一整页展示「天天开心期末必过」。按 O 也可直接预览来信，Esc 或右上角 × 返回。
   5. 手势引擎 MediaPipe Tasks Vision 与模型已放在 ./vendor，完全在本机运行，画面不会上传。
-  6. 没有摄像头也能玩：点击「演示」，按住鼠标/手指张开，左右移动即可挥动粒子与照片；按 O 查看彩蛋。
+  6. 没有摄像头也能玩：点击「演示」，按住鼠标/手指张开，左右移动即可挥动光球与照片；按 O 查看彩蛋。
   7. 如果复制文件，请同时保留 vendor 和 photos 文件夹；否则会用演示模式继续运行。
 -->
 <style>
@@ -230,8 +230,8 @@
   .status-chip[data-tone="connecting"] .status-dot,
   .status-chip[data-tone="ready"] .status-dot { background: var(--gold); box-shadow: 0 0 11px rgba(217, 187, 131, .7); animation: dotPulse 1.8s ease-in-out infinite; }
   .status-chip[data-tone="fist"] .status-dot { background: #f0cf91; box-shadow: 0 0 12px rgba(240, 207, 145, .7); }
-  .status-chip[data-tone="like"] { color: rgba(255, 237, 196, .95); border-color: rgba(242, 195, 109, .38); background: rgba(47, 36, 18, .52); }
-  .status-chip[data-tone="like"] .status-dot { background: #ffd889; box-shadow: 0 0 15px rgba(255, 211, 128, .9); animation: dotPulse 1.1s ease-in-out infinite; }
+  .status-chip[data-tone="peace"] { color: rgba(255, 237, 196, .95); border-color: rgba(242, 195, 109, .38); background: rgba(47, 36, 18, .52); }
+  .status-chip[data-tone="peace"] .status-dot { background: #ffd889; box-shadow: 0 0 15px rgba(255, 211, 128, .9); animation: dotPulse 1.1s ease-in-out infinite; }
   .status-chip[data-tone="open"] { color: rgba(192, 255, 228, .82); border-color: rgba(112, 235, 188, .2); background: rgba(7, 32, 27, .38); }
   .status-chip[data-tone="open"] .status-dot { background: var(--emerald); box-shadow: 0 0 12px rgba(118, 227, 182, .68); }
   .status-chip[data-tone="wave"] { color: rgba(221, 255, 238, .9); border-color: rgba(135, 244, 201, .3); background: rgba(8, 39, 32, .48); }
@@ -327,7 +327,91 @@
     pointer-events: none;
     transition: opacity .5s ease, transform .5s cubic-bezier(.2, .8, .2, 1), visibility .5s;
   }
-  .camera-card.visible { opacity: 1; visibility: visible; transform: none; }
+  .camera-card.visible { opacity: 1; visibility: visible; transform: none; pointer-events: auto; }
+  .camera-card.failed { width: 238px; }
+
+  .cam-error {
+    position: absolute;
+    inset: 0;
+    z-index: 4;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 0 20px;
+    text-align: center;
+    background: radial-gradient(circle at 50% 42%, rgba(46, 26, 14, .58), rgba(3, 10, 9, .86));
+  }
+  .camera-card.failed .cam-error { display: flex; }
+  .cam-error strong {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .1em;
+    color: rgba(255, 229, 183, .88);
+  }
+  .cam-error span {
+    font-size: 9.5px;
+    line-height: 1.6;
+    letter-spacing: .02em;
+    color: rgba(255, 229, 183, .46);
+  }
+
+  .camera-tools {
+    display: none;
+    gap: 7px;
+    padding: 9px 10px 10px;
+    border-top: 1px solid rgba(222, 205, 169, .09);
+    background: rgba(2, 10, 9, .62);
+  }
+  .camera-tools[data-open="1"] { display: grid; }
+  .cam-select {
+    width: 100%;
+    min-width: 0;
+    padding: 5px 6px;
+    font: inherit;
+    font-size: 10px;
+    letter-spacing: .02em;
+    color: rgba(255, 236, 200, .9);
+    background: rgba(255, 255, 255, .05);
+    border: 1px solid rgba(222, 205, 169, .2);
+    border-radius: 7px;
+    outline: none;
+    cursor: pointer;
+  }
+  .cam-select:disabled { opacity: .5; cursor: default; }
+  .cam-tools-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .cam-tip {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    font-size: 9.5px;
+    line-height: 1.6;
+    letter-spacing: .015em;
+    color: rgba(255, 229, 183, .6);
+  }
+  .cam-tip[hidden] { display: none; }
+  .cam-tools-actions { display: flex; flex: 0 0 auto; gap: 5px; }
+  .cam-action {
+    padding: 4px 9px;
+    font: inherit;
+    font-size: 9.5px;
+    letter-spacing: .06em;
+    color: rgba(255, 238, 205, .94);
+    background: rgba(255, 212, 148, .12);
+    border: 1px solid rgba(255, 212, 148, .3);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background .2s ease, border-color .2s ease, color .2s ease;
+  }
+  .cam-action:hover { background: rgba(255, 212, 148, .22); border-color: rgba(255, 212, 148, .48); }
+  .cam-action.ghost { color: rgba(255, 238, 205, .6); background: transparent; border-color: rgba(222, 205, 169, .18); }
+  .cam-action.ghost:hover { color: rgba(255, 238, 205, .8); border-color: rgba(222, 205, 169, .34); }
 
   .camera-view {
     position: relative;
@@ -554,7 +638,7 @@
   }
 
   /* ─────────────────────────────────────────────────────────────
-     点赞手势彩蛋 · 黑底白字来信
+     比耶手势彩蛋 · 黑底白字来信
      ───────────────────────────────────────────────────────────── */
   .story {
     position: fixed;
@@ -1324,12 +1408,26 @@
     <div class="camera-view">
       <video id="camVideo" playsinline muted autoplay aria-hidden="true"></video>
       <canvas id="camOverlay" aria-hidden="true"></canvas>
+      <div class="cam-error" id="camError">
+        <strong>摄像头未启动</strong>
+        <span id="camErrorDetail">检查占用与摄像头开关后重试</span>
+      </div>
       <div class="cam-label"><span class="cam-live" aria-hidden="true"></span>HAND CAM</div>
       <i class="cam-corner tl"></i><i class="cam-corner tr"></i><i class="cam-corner bl"></i><i class="cam-corner br"></i>
     </div>
     <div class="camera-meta">
       <span id="camMetaText">等待手掌</span>
       <span class="privacy">仅本机处理</span>
+    </div>
+    <div class="camera-tools" id="cameraTools" data-open="0">
+      <select class="cam-select" id="camDeviceSelect" aria-label="选择摄像头"></select>
+      <div class="cam-tools-row">
+        <p class="cam-tip" id="camTip" hidden></p>
+        <div class="cam-tools-actions">
+          <button class="cam-action" id="camRetryBtn" type="button">重试</button>
+          <button class="cam-action ghost" id="camDismissBtn" type="button">收起</button>
+        </div>
+      </div>
     </div>
   </aside>
 
@@ -1343,15 +1441,15 @@
       </div>
       <div class="legend-item" data-gesture="open">
         <span class="legend-num">02</span>
-        <span><span class="legend-label">张开</span><span class="legend-sub">星屑散落</span></span>
+        <span><span class="legend-label">张开</span><span class="legend-sub">光球环绕</span></span>
       </div>
       <div class="legend-item" data-gesture="wave">
         <span class="legend-num">03</span>
         <span><span class="legend-label">挥手</span><span class="legend-sub">粒子随行</span></span>
       </div>
-      <div class="legend-item" data-gesture="thumbs">
+      <div class="legend-item" data-gesture="peace">
         <span class="legend-num">04</span>
-        <span><span class="legend-label">点赞</span><span class="legend-sub">打开来信</span></span>
+        <span><span class="legend-label">比耶</span><span class="legend-sub">打开来信</span></span>
       </div>
       <div class="legend-item" data-gesture="ok">
         <span class="legend-num">05</span>
@@ -1361,7 +1459,7 @@
     <p class="hint" id="hintText">开启手势，让这棵树回应你的掌心</p>
   </footer>
 
-  <!-- 点赞手势彩蛋：一封黑底白字的来信 -->
+  <!-- 比耶手势彩蛋：一封黑底白字的来信 -->
   <section class="story" id="story" role="dialog" aria-modal="true" aria-label="来自王泽瑞的一封信" aria-describedby="storyA11y" aria-hidden="true" tabindex="-1">
     <canvas id="storyCanvas" class="story-canvas" aria-hidden="true"></canvas>
     <div class="story-grain" aria-hidden="true"></div>
@@ -1446,9 +1544,11 @@
   const treeCanvas = $("treeCanvas");
   const photoCanvas = $("photoCanvas");
   const bgCanvas = $("bgCanvas");
-  const ctx = treeCanvas.getContext("2d", { alpha: true, desynchronized: true });
-  const photoCtx = photoCanvas.getContext("2d", { alpha: true, desynchronized: true });
-  const bgCtx = bgCanvas.getContext("2d", { alpha: true, desynchronized: true });
+  const ctx = treeCanvas.getContext("2d", { alpha: true });
+  const photoCtx = photoCanvas.getContext("2d", { alpha: true });
+  photoCtx.imageSmoothingEnabled = true;
+  photoCtx.imageSmoothingQuality = "high";
+  const bgCtx = bgCanvas.getContext("2d", { alpha: true });
 
   const statusChip = $("statusChip");
   const statusText = $("statusText");
@@ -1463,10 +1563,16 @@
   const camVideo = $("camVideo");
   const camOverlay = $("camOverlay");
   const camMetaText = $("camMetaText");
+  const camErrorDetail = $("camErrorDetail");
+  const cameraTools = $("cameraTools");
+  const camDeviceSelect = $("camDeviceSelect");
+  const camRetryBtn = $("camRetryBtn");
+  const camDismissBtn = $("camDismissBtn");
+  const camTip = $("camTip");
   const toast = $("toast");
   const storyEl = $("story");
   const storyCanvas = $("storyCanvas");
-  const storyCtx = storyCanvas.getContext("2d", { alpha: true, desynchronized: true });
+  const storyCtx = storyCanvas.getContext("2d", { alpha: true });
   const storyLetterPage = $("storyLetterPage");
   const storyBlessPage = $("storyBlessPage");
   const storyLines = $("storyLines");
@@ -1517,9 +1623,11 @@
     intro: 0,
     openness: 0,
     openTarget: 0,
-    gesture: "none",              // none | fist | open | ok | thumbs
-    thumbsSince: 0,
+    gesture: "none",              // none | fist | open | ok | peace
+    peaceSince: 0,
     photoFocusIndex: -1,
+    photoFocusHoldUntil: 0,
+    photoAimIndex: -1,
     photoDebugFocus: -1,
     hasHand: false,
     hasResults: false,
@@ -1535,6 +1643,12 @@
       ny: 0,
       vx: 0,
       initialized: false
+    },
+    sphere: {
+      ready: false,
+      x: view.cx,
+      y: view.cy,
+      r: 0
     },
     demo: {
       pointerActive: false,
@@ -1560,7 +1674,11 @@
       sendStarted: 0,
       sendFinished: 0,
       lastSendAt: 0,
-      lastError: ""
+      lastError: "",
+      deviceId: "",          // 用户选中的摄像头（写入 localStorage 记住）
+      activeDeviceId: "",    // 真正打开成功的摄像头
+      lastErrorName: "",     // 上一次失败的 DOMException 名称
+      lastErrorDetail: ""
     }
   };
 
@@ -1579,15 +1697,26 @@
     initialized: false
   };
 
-  // 五张照片被布置在散开的星云里，白框卡片会随掌心移动。
+  // 九张照片贴在光球正面，白框卡片随光球与掌心移动。
   const PHOTO_LAYOUT = [
     { nx: -0.31, ny: -0.18, rotation: -0.09, scale: 1.03, phase: 0.3, driftX: 0.020, driftY: 0.016, driftSpeed: 0.25 },
     { nx: 0.30, ny: -0.22, rotation: 0.08, scale: 0.95, phase: 2.4, driftX: 0.021, driftY: 0.012, driftSpeed: 0.22 },
     { nx: 0.02, ny: 0.06, rotation: -0.04, scale: 1.08, phase: 4.2, driftX: 0.025, driftY: 0.018, driftSpeed: 0.20 },
     { nx: 0.33, ny: 0.17, rotation: 0.11, scale: 0.92, phase: 5.1, driftX: 0.017, driftY: 0.020, driftSpeed: 0.28 },
-    { nx: -0.30, ny: 0.05, rotation: 0.04, scale: 0.98, phase: 1.2, driftX: 0.020, driftY: 0.016, driftSpeed: 0.24 }
+    { nx: -0.30, ny: 0.05, rotation: 0.04, scale: 0.98, phase: 1.2, driftX: 0.020, driftY: 0.016, driftSpeed: 0.24 },
+    { nx: -0.17, ny: -0.28, rotation: 0.07, scale: 0.96, phase: 3.2, driftX: 0.018, driftY: 0.014, driftSpeed: 0.23 },
+    { nx: 0.18, ny: -0.10, rotation: -0.06, scale: 1.02, phase: 5.4, driftX: 0.022, driftY: 0.015, driftSpeed: 0.20 },
+    { nx: -0.18, ny: 0.25, rotation: 0.05, scale: 0.94, phase: 2.0, driftX: 0.019, driftY: 0.017, driftSpeed: 0.26 },
+    { nx: 0.20, ny: 0.27, rotation: -0.08, scale: 1.00, phase: 4.7, driftX: 0.021, driftY: 0.013, driftSpeed: 0.24 }
   ];
-  const PHOTO_SOURCES = ["./photos/photo-1.jpg", "./photos/photo-2.jpg", "./photos/photo-3.jpg", "./photos/photo-4.jpg", "./photos/photo-5.jpg"];
+  const PHOTO_SOURCES = [
+    "./photos/photo-1.jpg", "./photos/photo-2.jpg", "./photos/photo-3.jpg",
+    "./photos/photo-4.jpg", "./photos/photo-5.jpg", "./photos/photo-6.jpg",
+    "./photos/photo-7.jpg", "./photos/photo-8.jpg", "./photos/photo-9.jpg"
+  ];
+  const SCATTER_MOTION_MULTIPLIER = 9;
+  const SPHERE_SPIN_SPEED = 0.70;
+  const PHOTO_CLUSTER_SCALE = 1.65;
   const photoCards = [];
 
   // ─────────────────────────────────────────────────────────────
@@ -1675,7 +1804,7 @@
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 五张照片卡片
+  // 九张照片卡片
   // ─────────────────────────────────────────────────────────────
   function initPhotoCards() {
     PHOTO_LAYOUT.forEach((layout, index) => {
@@ -1762,7 +1891,7 @@
     photoCtx.shadowBlur = 0;
     photoCtx.shadowOffsetY = 0;
 
-    // 相纸边缘的极细高光，让白框在黑色星云中更干净
+    // 相纸边缘的极细高光，让白框在光球前更干净
     photoCtx.strokeStyle = "rgba(255,255,255,.7)";
     photoCtx.lineWidth = 0.7;
     roundRectPath(photoCtx, -outerW / 2 + 0.5, -outerH / 2 + 0.5, outerW - 1, outerH - 1, 2.5 + focusEase * 2);
@@ -1797,25 +1926,24 @@
     if (presence < 0.008 || !view.w || !photoCards.length) {
       clearPhotoCanvas();
       app.photoFocusIndex = -1;
+      app.photoFocusHoldUntil = 0;
+      app.photoAimIndex = -1;
       return;
     }
 
     const t = now / 1000;
-    const photoShiftX = app.hand.visible
-      ? app.hand.nx * Math.min(view.w * 0.28, view.treeH * 0.45) + app.gustX * 0.24
-      : 0;
-    const photoShiftY = app.hand.visible
-      ? app.hand.ny * Math.min(view.treeH * 0.20, view.w * 0.20)
-      : 0;
+    const sphereR = Math.max(1, app.sphere.r);
 
     clearPhotoCanvas();
     photoCtx.globalCompositeOperation = "source-over";
     photoCtx.globalAlpha = 1;
+    photoCtx.imageSmoothingEnabled = true;
+    photoCtx.imageSmoothingQuality = "high";
 
     for (const card of photoCards) {
       const layout = PHOTO_LAYOUT[card.index];
-      const boxW = view.treeH * 0.072 * layout.scale;
-      const boxH = view.treeH * 0.090 * layout.scale;
+      const boxW = view.treeH * 0.052 * layout.scale;
+      const boxH = view.treeH * 0.065 * layout.scale;
       let contentW = boxW;
       let contentH = boxW / Math.max(0.4, card.aspect);
       if (contentH > boxH) {
@@ -1825,64 +1953,69 @@
       card.baseW = contentW;
       card.baseH = contentH;
 
-      const drift = t * layout.driftSpeed + layout.phase;
-      card.x = view.cx
-        + layout.nx * view.treeH
-        + photoShiftX
-        + Math.sin(drift) * layout.driftX * view.treeH;
-      card.y = view.cy
-        + layout.ny * view.treeH
-        + photoShiftY
-        + Math.cos(drift * 0.83 + 0.7) * layout.driftY * view.treeH;
-      card.rotation = layout.rotation + Math.sin(t * 0.18 + layout.phase) * 0.018;
+      // 照片固定在光球正面，始终朝向你；不参与球体的 3D 自转。
+      const clusterScale = sphereR * PHOTO_CLUSTER_SCALE;
+      const drift = t * 0.34 + layout.phase;
+      const orbOffsetX = layout.nx * clusterScale;
+      const orbOffsetY = layout.ny * clusterScale;
+      card.x = app.sphere.x
+        + orbOffsetX
+        + Math.sin(drift) * 3.2;
+      card.y = app.sphere.y
+        + orbOffsetY
+        + Math.cos(drift * 0.82 + 0.6) * 2.6;
+      card.rotation = layout.rotation;
       card.visible = presence;
     }
 
-    const gateRadius = Math.max(70, Math.min(view.w, view.h) * 0.145);
     const canUsePhotos = presence > 0.22 && !story.open;
-    let targetIndex = -1;
+    const okGesture = canUsePhotos && app.mode === "camera" && app.gesture === "ok";
+    const aimX = app.hand.visible ? app.hand.x * view.w : -9999;
+    const aimY = app.hand.visible ? app.hand.y * view.h : -9999;
+    let aimedIndex = -1;
 
-    if (canUsePhotos && app.photoDebugFocus >= 0) {
-      targetIndex = clamp(app.photoDebugFocus, 0, photoCards.length - 1);
-    } else if (canUsePhotos && app.mode === "camera" && app.gesture === "ok") {
-      // 已经锁定的照片保持放大；未锁定时只接受位于画面中心的照片
-      if (app.photoFocusIndex >= 0) {
-        targetIndex = app.photoFocusIndex;
-      } else {
-        let bestDistance = gateRadius;
-        for (const card of photoCards) {
-          const distance = Math.hypot(card.x - view.w / 2, card.y - view.h * 0.5);
-          if (distance <= bestDistance) {
-            bestDistance = distance;
-            targetIndex = card.index;
-          }
+    // 以掌心准星为圆心找照片，不再要求照片位于屏幕中央。
+    if (canUsePhotos && app.hand.visible) {
+      let bestScore = 1.15;
+      for (const card of photoCards) {
+        const padX = Math.max(32, card.baseW * 0.5 + 12);
+        const padY = Math.max(36, card.baseH * 0.5 + 12);
+        const dx = (aimX - card.x) / padX;
+        const dy = (aimY - card.y) / padY;
+        const score = dx * dx + dy * dy;
+        if (score < bestScore) {
+          bestScore = score;
+          aimedIndex = card.index;
         }
       }
     }
-    app.photoFocusIndex = targetIndex;
 
-    const lookingForCenter = canUsePhotos && app.mode === "camera" && app.gesture === "ok" && targetIndex < 0;
-
-    if (lookingForCenter) {
-      // OK 已做出，但还没有照片进入中央：给出一个很轻的取景提示
-      const cx = view.w / 2;
-      const cy = view.h * 0.5;
-      photoCtx.save();
-      photoCtx.globalCompositeOperation = "lighter";
-      photoCtx.strokeStyle = "rgba(255,255,255,.26)";
-      photoCtx.lineWidth = 1;
-      photoCtx.setLineDash([3, 10]);
-      photoCtx.beginPath();
-      photoCtx.arc(cx, cy, gateRadius * 0.72, 0, TAU);
-      photoCtx.stroke();
-      photoCtx.setLineDash([]);
-      photoCtx.globalAlpha = 0.55;
-      photoCtx.beginPath();
-      photoCtx.arc(cx, cy, 2.3, 0, TAU);
-      photoCtx.fillStyle = "rgba(255,255,255,.7)";
-      photoCtx.fill();
-      photoCtx.restore();
+    let targetIndex = -1;
+    if (canUsePhotos && app.photoDebugFocus >= 0) {
+      targetIndex = clamp(app.photoDebugFocus, 0, photoCards.length - 1);
+    } else if (okGesture) {
+      // 已经打开的照片保持锁定；否则打开准星当前指向的照片。
+      if (app.photoFocusIndex >= 0) {
+        targetIndex = app.photoFocusIndex;
+      } else if (aimedIndex >= 0) {
+        targetIndex = aimedIndex;
+      }
+      if (targetIndex >= 0) {
+        // 手势短暂抖动时延续放大态，避免照片忽大忽小。
+        app.photoFocusHoldUntil = now + 280;
+      }
+    } else if (
+      canUsePhotos &&
+      app.mode === "camera" &&
+      app.photoFocusIndex >= 0 &&
+      now < app.photoFocusHoldUntil
+    ) {
+      targetIndex = app.photoFocusIndex;
     }
+
+    if (targetIndex < 0) app.photoFocusHoldUntil = 0;
+    app.photoFocusIndex = targetIndex;
+    app.photoAimIndex = targetIndex < 0 ? aimedIndex : -1;
 
     for (const card of photoCards) {
       const wanted = card.index === targetIndex ? 1 : 0;
@@ -1892,46 +2025,137 @@
       if (card.focus < 0.001) card.focus = 0;
     }
 
-    const maxFocus = Math.max(...photoCards.map((card) => card.focus));
     const ordered = [...photoCards].sort((a, b) => (a.focus - b.focus) || (a.y - b.y));
-
-    if (maxFocus > 0.03) {
-      const focused = photoCards.find((card) => card.focus === maxFocus) || null;
-      if (focused) {
-        const g = photoCtx.createRadialGradient(view.w / 2, view.h * 0.47, 0, view.w / 2, view.h * 0.47, view.w * 0.58);
-        g.addColorStop(0, `rgba(255,253,243,${0.12 * maxFocus})`);
-        g.addColorStop(0.5, `rgba(255,253,243,${0.035 * maxFocus})`);
-        g.addColorStop(1, "rgba(255,253,243,0)");
-        photoCtx.globalCompositeOperation = "lighter";
-        photoCtx.globalAlpha = 1;
-        photoCtx.fillStyle = g;
-        photoCtx.fillRect(0, 0, view.w, view.h);
-        photoCtx.globalCompositeOperation = "source-over";
-      }
-    }
 
     const smallFrame = clamp(view.treeH * 0.006, 3, 5);
     const focusFrame = clamp(view.treeH * 0.019, 9, 16);
+    const snap = (value) => Math.round(value * view.dpr) / view.dpr;
+    const safeMarginX = 24;
+    const safeMarginTop = view.w < 600 ? 78 : 92;
+    const safeMarginBottom = view.w < 600 ? 132 : 118;
 
     for (const card of ordered) {
       const focusEase = card.focus * card.focus * (3 - 2 * card.focus);
       const targetW = Math.min(view.w * 0.62, 860);
       const targetH = Math.min(view.h * 0.62, 740);
       const scaleToFocus = Math.min(targetW / Math.max(1, card.baseW), targetH / Math.max(1, card.baseH));
-      const contentW = card.baseW * lerp(1, scaleToFocus, focusEase);
-      const contentH = card.baseH * lerp(1, scaleToFocus, focusEase);
-      const frame = lerp(smallFrame, focusFrame, focusEase);
-      const drawX = lerp(card.x, view.w / 2, focusEase * 0.97);
-      const drawY = lerp(card.y, view.h * 0.47, focusEase * 0.97);
+      const contentW = Math.max(1, snap(card.baseW * lerp(1, scaleToFocus, focusEase)));
+      const contentH = Math.max(1, snap(card.baseH * lerp(1, scaleToFocus, focusEase)));
+      const frame = Math.max(1, snap(lerp(smallFrame, focusFrame, focusEase)));
+
+      // 不再把照片移到画面正中：只在原位放大；靠近边缘时做最小的避让。
+      const targetOuterW = card.baseW * scaleToFocus + focusFrame * 2;
+      const targetOuterH = card.baseH * scaleToFocus + focusFrame * 2;
+      const safeFocusX = clamp(
+        card.x,
+        safeMarginX + targetOuterW * 0.5,
+        view.w - safeMarginX - targetOuterW * 0.5
+      );
+      const safeFocusY = clamp(
+        card.y,
+        safeMarginTop + targetOuterH * 0.5,
+        view.h - safeMarginBottom - targetOuterH * 0.5
+      );
+      const drawX = snap(lerp(card.x, safeFocusX, focusEase));
+      const drawY = snap(lerp(card.y, safeFocusY, focusEase));
       const rotation = lerp(card.rotation, 0, focusEase);
-      let alpha = presence * (focusEase > 0.2 ? 1 : 0.92);
-      if (maxFocus > 0.02) alpha *= 1 - 0.52 * maxFocus * (1 - card.focus);
+      const alpha = presence;
       if (alpha <= 0.005) continue;
       drawPhotoCard(card, drawX, drawY, contentW, contentH, frame, rotation, alpha, focusEase);
     }
 
+    drawAimReticle(aimX, aimY, aimedIndex, targetIndex, presence, now);
+
     photoCtx.globalAlpha = 1;
     photoCtx.globalCompositeOperation = "source-over";
+  }
+
+  function drawAimReticle(aimX, aimY, aimedIndex, targetIndex, presence, now) {
+    if (!app.hand.visible || presence < 0.18) return;
+    if (aimX < -20 || aimX > view.w + 20 || aimY < -20 || aimY > view.h + 20) return;
+    const hx = clamp(aimX, 18, view.w - 18);
+    const hy = clamp(aimY, 18, view.h - 18);
+    const t = now / 1000;
+    const aiming = aimedIndex >= 0;
+    const locked = targetIndex >= 0;
+    const color = locked
+      ? "rgba(255,224,155,.95)"
+      : aiming
+        ? "rgba(255,255,255,.9)"
+        : "rgba(255,236,198,.56)";
+    const radius = 22 + (aiming ? 3 : 0) + Math.sin(t * 2.4) * 1.3;
+    const armLength = locked ? 22 : aiming ? 28 : 22;
+
+    photoCtx.save();
+    photoCtx.globalCompositeOperation = "source-over";
+    photoCtx.globalAlpha = locked ? 0.78 : 1;
+    photoCtx.translate(hx, hy);
+    photoCtx.lineCap = "round";
+
+    const strokeReticle = (strokeStyle, width, glow) => {
+      photoCtx.strokeStyle = strokeStyle;
+      photoCtx.lineWidth = width;
+      photoCtx.shadowColor = glow ? "rgba(0,0,0,.55)" : "transparent";
+      photoCtx.shadowBlur = glow ? 4 : 0;
+      for (let i = 0; i < 4; i++) {
+        const start = i * TAU / 4 + 0.24;
+        photoCtx.beginPath();
+        photoCtx.arc(0, 0, radius, start, start + TAU / 4 - 0.48);
+        photoCtx.stroke();
+      }
+      for (let i = 0; i < 4; i++) {
+        const angle = i * TAU / 4;
+        const cos = Math.cos(angle);
+        const sin = Math.sin(angle);
+        photoCtx.beginPath();
+        photoCtx.moveTo(cos * (radius + 5), sin * (radius + 5));
+        photoCtx.lineTo(cos * (radius + armLength), sin * (radius + armLength));
+        photoCtx.stroke();
+      }
+    };
+
+    strokeReticle("rgba(0,0,0,.42)", 3.4, false);
+    strokeReticle(color, locked ? 1.6 : 1.4, true);
+
+    photoCtx.shadowColor = "rgba(0,0,0,.55)";
+    photoCtx.shadowBlur = 3;
+    photoCtx.fillStyle = color;
+    photoCtx.beginPath();
+    photoCtx.arc(0, 0, locked ? 2.2 : 1.7, 0, TAU);
+    photoCtx.fill();
+    photoCtx.restore();
+
+    // 准星指向的照片用四角框标出来
+    if (aiming && !locked) {
+      const card = photoCards[aimedIndex];
+      if (card) {
+        const bw = card.baseW + 18;
+        const bh = card.baseH + 18;
+        const left = card.x - bw / 2;
+        const top = card.y - bh / 2;
+        const corner = Math.min(10, bw * 0.24, bh * 0.24);
+        photoCtx.save();
+        photoCtx.strokeStyle = "rgba(255,244,213,.88)";
+        photoCtx.lineWidth = 1.1;
+        photoCtx.shadowColor = "rgba(255,230,175,.55)";
+        photoCtx.shadowBlur = 7;
+        photoCtx.beginPath();
+        photoCtx.moveTo(left, top + corner);
+        photoCtx.lineTo(left, top);
+        photoCtx.lineTo(left + corner, top);
+        photoCtx.moveTo(left + bw - corner, top);
+        photoCtx.lineTo(left + bw, top);
+        photoCtx.lineTo(left + bw, top + corner);
+        photoCtx.moveTo(left + bw, top + bh - corner);
+        photoCtx.lineTo(left + bw, top + bh);
+        photoCtx.lineTo(left + bw - corner, top + bh);
+        photoCtx.moveTo(left + corner, top + bh);
+        photoCtx.lineTo(left, top + bh);
+        photoCtx.lineTo(left, top + bh - corner);
+        photoCtx.stroke();
+        photoCtx.restore();
+      }
+    }
   }
 
   // ─────────────────────────────────────────────────────────────
@@ -2129,26 +2353,14 @@
     treeHazeCanvas = c;
   }
 
-  function scatterTargetFor(by) {
-    const angle = Math.random() * TAU;
-    const radius = 0.06 + Math.pow(Math.random(), 0.62) * 0.39;
-    const xSqueeze = view.w < 760 ? 0.82 : 1.08;
-    return {
-      angle,
-      radius: radius * (reducedMotion ? 0.82 : 1),
-      xSqueeze,
-      yScale: rand(0.76, 0.92),
-      yBias: by * 0.16 + rand(-0.035, 0.035),
-      orbitSpeed: rand(-0.075, 0.075),
-      floatSpeed: rand(2.7, 5.3),
-      parallax: rand(0.72, 1.3),
-      phase: rand(0, TAU),
-      tw: rand(0.6, 2.4)
-    };
-  }
-
   function baseParticle(data) {
-    const s = scatterTargetFor(data.by);
+    // 散开后的球体坐标：七成在球壳，三成填进球内，形成有体积的光球。
+    const pole = rand(-1, 1);
+    const ring = Math.sqrt(Math.max(0, 1 - pole * pole));
+    const azimuth = rand(0, TAU);
+    const shellRadius = Math.random() < 0.72
+      ? rand(0.90, 1.03)
+      : Math.cbrt(Math.random()) * 0.86;
     return Object.assign({
       kind: "foliage",
       sprite: getSprite(data.color),
@@ -2161,16 +2373,13 @@
       size: 4,
       alpha: 0.65,
       release: 0.15,
-      phase: s.phase,
-      tw: s.tw,
-      scatterAngle: s.angle,
-      scatterRadius: s.radius,
-      scatterXSqueeze: s.xSqueeze,
-      scatterYScale: s.yScale,
-      scatterYBias: s.yBias,
-      orbitSpeed: s.orbitSpeed,
-      floatSpeed: s.floatSpeed,
-      parallax: s.parallax,
+      phase: rand(0, TAU),
+      tw: rand(0.6, 2.4),
+      floatSpeed: rand(2.7, 5.3),
+      sphereX: Math.cos(azimuth) * ring * shellRadius,
+      sphereY: pole * shellRadius,
+      sphereZ: Math.sin(azimuth) * ring * shellRadius,
+      spherePhase: rand(0, TAU),
       depthAlpha: 1,
       depthScale: 1
     }, data);
@@ -2478,6 +2687,25 @@
       : 0;
     app.gustX += (gustTarget - app.gustX) * (1 - Math.exp(-dt * 3.4));
 
+    // 整个光球跟随掌心移动；单独做一次快速跟随，比原来的粒子偏移更跟手。
+    const sphereRadiusBase = Math.min(view.w * 0.30, view.h * 0.285, 285);
+    const sphereTargetX = view.cx
+      + (app.hand.visible ? app.hand.nx * Math.min(view.w * 0.23, view.treeH * 0.44) : 0)
+      + app.gustX * 0.2;
+    const sphereTargetY = view.cy
+      + (app.hand.visible ? app.hand.ny * view.h * 0.07 : 0);
+    if (!app.sphere.ready) {
+      app.sphere.x = sphereTargetX;
+      app.sphere.y = sphereTargetY;
+      app.sphere.r = sphereRadiusBase;
+      app.sphere.ready = true;
+    } else {
+      const follow = 1 - Math.exp(-16 * dt);
+      app.sphere.x = lerp(app.sphere.x, sphereTargetX, follow);
+      app.sphere.y = lerp(app.sphere.y, sphereTargetY, follow);
+      app.sphere.r = lerp(app.sphere.r, sphereRadiusBase, 1 - Math.exp(-10 * dt));
+    }
+
     const waving = app.hand.visible && app.openness > 0.28 && Math.abs(app.hand.vx) > 0.72;
     if (waving) app.waveUntil = now + 360;
 
@@ -2490,16 +2718,16 @@
     app.openness += (desired - app.openness) * (1 - Math.exp(-rate * dt));
     if (Math.abs(desired - app.openness) < 0.0008) app.openness = desired;
 
-    // 竖起大拇指并保持片刻，打开写给使用者的信
+    // 比耶并保持片刻，打开写给使用者的信
     if (
       app.mode === "camera" &&
-      app.gesture === "thumbs" &&
-      app.thumbsSince &&
-      now - app.thumbsSince > 320 &&
+      app.gesture === "peace" &&
+      app.peaceSince &&
+      now - app.peaceSince > 320 &&
       !story.open
     ) {
-      app.thumbsSince = 0;
-      openStory("thumbs");
+      app.peaceSince = 0;
+      openStory("peace");
     }
   }
 
@@ -2609,16 +2837,7 @@
       ctx.drawImage(sparkleSprite, x - s / 2, y - s / 2, s, s);
     }
 
-    // 中心的一点星芒，让能量场有明确焦点
-    ctx.globalAlpha = energy * 0.38;
-    ctx.strokeStyle = "rgba(255,238,193,.75)";
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(hx - 13, hy);
-    ctx.lineTo(hx + 13, hy);
-    ctx.moveTo(hx, hy - 13);
-    ctx.lineTo(hx, hy + 13);
-    ctx.stroke();
+    // 中心准星改由相片层的掌位准星绘制
     ctx.globalAlpha = 1;
   }
 
@@ -2652,16 +2871,21 @@
       ctx.drawImage(treeHazeCanvas, view.cx - hazeW / 2, hazeTop, hazeW, hazeH);
     }
 
-    // 手的位置决定树在握拳时的轻微转动；散开时指向星云
+    // 手的位置决定树在握拳时的轻微转动；散开时指向光球
     const yawTarget = Math.sin(t * 0.16) * 0.13 + (app.hand.visible ? app.hand.nx * 0.36 * (1 - open) : 0);
     app.treeYaw = app.treeYaw === undefined ? yawTarget : lerp(app.treeYaw, yawTarget, 1 - Math.exp(-dt * 3.5));
     if (Math.abs(app.treeYaw) < 0.0001) app.treeYaw = 0;
     const cosY = Math.cos(app.treeYaw);
     const sinY = Math.sin(app.treeYaw);
 
-    // 散开后的整体偏移：手的横移 + 挥动惯性
-    const shiftX = app.hand.visible ? app.hand.nx * view.w * 0.185 : 0;
-    const shiftY = app.hand.visible ? app.hand.ny * view.h * 0.055 : 0;
+    // 散开后粒子和照片共同围绕的光球
+    const sphereYaw = t * (reducedMotion ? 0.18 : SPHERE_SPIN_SPEED);
+    const sphereTilt = 0.24 + Math.sin(t * 0.23) * 0.05;
+    const cosSphereYaw = Math.cos(sphereYaw);
+    const sinSphereYaw = Math.sin(sphereYaw);
+    const cosSphereTilt = Math.cos(sphereTilt);
+    const sinSphereTilt = Math.sin(sphereTilt);
+    const sphereRadius = app.sphere.r;
 
     // 星星的实体形状（散开时褪去）
     if (starMetrics) {
@@ -2684,6 +2908,13 @@
       }
     }
 
+    // 光球外围的微光，让球体轮廓更完整
+    if (open > 0.04 && sphereRadius > 1) {
+      const orbSize = sphereRadius * 2.55;
+      ctx.globalAlpha = open * 0.055 * intro;
+      ctx.drawImage(getSprite("emerald"), app.sphere.x - orbSize / 2, app.sphere.y - orbSize / 2, orbSize, orbSize);
+    }
+
     // 粒子
     let drawn = 0;
     for (let i = 0; i < particles.length; i++) {
@@ -2693,24 +2924,24 @@
       const mixT = clamp((open - p.release * 0.72) / 0.38, 0, 1);
       const mix = mixT * mixT * (3 - 2 * mixT);
 
-      // 星云缓慢自转，同时用不同视差响应掌心
-      const scatterAngle = p.scatterAngle + t * p.orbitSpeed * 0.26 + Math.sin(t * 0.21 + p.phase) * 0.035;
-      const radiusWobble = 1 + Math.sin(t * 0.46 + p.phase) * 0.035;
-      const scatterR = p.scatterRadius * radiusWobble;
-      const scatterX = view.cx
-        + Math.cos(scatterAngle) * scatterR * p.scatterXSqueeze * view.treeH
-        + shiftX * p.parallax
-        + app.gustX * p.parallax * 0.92;
-      const scatterY = view.cy
-        + Math.sin(scatterAngle) * scatterR * p.scatterYScale * view.treeH
-        + p.scatterYBias * view.treeH
-        + shiftY * p.parallax
-        + Math.sin(t * p.floatSpeed * 0.52 + p.phase) * 4.4 * scale;
+      // 3D 光球：粒子沿球面环绕，同时保留球内的体积感。
+      const pSphereX = p.sphereX;
+      const pSphereY = p.sphereY;
+      const pSphereZ = p.sphereZ;
+      const rotatedX = pSphereX * cosSphereYaw + pSphereZ * sinSphereYaw;
+      const rotatedZ = pSphereZ * cosSphereYaw - pSphereX * sinSphereYaw;
+      const tiltedY = pSphereY * cosSphereTilt - rotatedZ * sinSphereTilt;
+      const tiltedZ = pSphereY * sinSphereTilt + rotatedZ * cosSphereTilt;
+      const perspective = 1 / Math.max(0.72, 1 - tiltedZ * 0.20);
+      const depth = clamp((tiltedZ + 1) * 0.5, 0, 1);
+      const breathing = 1 + Math.sin(t * 1.15 + p.spherePhase) * 0.012;
+      const sphereX = app.sphere.x + rotatedX * sphereRadius * perspective * breathing;
+      const sphereY = app.sphere.y + tiltedY * sphereRadius * perspective * breathing;
 
-      const targetX = treePoint.x + (scatterX - treePoint.x) * mix;
-      const targetY = treePoint.y + (scatterY - treePoint.y) * mix;
+      const targetX = treePoint.x + (sphereX - treePoint.x) * mix;
+      const targetY = treePoint.y + (sphereY - treePoint.y) * mix;
 
-      const response = (1 - mix) * 16.5 + mix * p.floatSpeed;
+      const response = (1 - mix) * 16.5 + mix * p.floatSpeed * SCATTER_MOTION_MULTIPLIER;
       const ease = 1 - Math.exp(-response * dt);
       p.x += (targetX - p.x) * ease;
       p.y += (targetY - p.y) * ease;
@@ -2723,6 +2954,7 @@
 
       let alpha = p.alpha * twinkle * (0.35 + 0.65 * intro);
       alpha *= lerp((0.65 + 0.35 * (treePoint.z + 0.4) / 0.8), 0.9, mix);
+      if (mix > 0.001) alpha *= lerp(1, 0.46 + 0.54 * depth, mix);
       if (p.kind === "light") alpha *= 1.02;
       if (p.kind === "dust") alpha *= 0.8;
       if (p.kind === "star" && open > 0.8) alpha *= 1.1;
@@ -2733,6 +2965,7 @@
       if (p.kind === "ornament") size *= 0.98 + 0.02 * Math.sin(t * 1.2 + p.phase);
       if (p.kind === "star") size *= 0.9 + 0.1 * Math.sin(t * p.tw * 1.8 + p.phase);
       if (mix > 0) size *= 1 + 0.15 * mix;
+      if (mix > 0.001) size *= lerp(1, 0.78 + 0.42 * depth, mix);
       size *= lerp(1, 0.91 + 0.18 * Math.sin(t * 0.7 + p.phase), mix * 0.3);
       if (size < 0.1) continue;
 
@@ -2843,6 +3076,7 @@
     const isOpen = app.openness > 0.28;
     const isWaving = isOpen && app.waveUntil > now && app.hand.visible;
     const photoFocused = app.photoFocusIndex >= 0;
+    const photoAimed = app.photoAimIndex >= 0;
     let status = "静候掌心";
     let tone = "idle";
     let hint = "开启手势，让这棵树回应你的掌心";
@@ -2863,35 +3097,37 @@
       } else if (!app.hasHand) {
         status = "寻找手掌";
         tone = "ready";
-        hint = "张开手掌看照片 · OK 放大 · 竖起大拇指查看来信";
+        hint = "张开手掌看照片 · OK 放大 · 比耶查看来信";
         camMeta = "寻找手掌";
-      } else if (app.gesture === "thumbs") {
-        status = "点赞 · 来信";
-        tone = "like";
-        hint = "保持点赞手势 · 正在打开写给你的信";
-        activeLegend = "thumbs";
-        camMeta = "点赞 · 打开来信";
+      } else if (app.gesture === "peace") {
+        status = "比耶 · 来信";
+        tone = "peace";
+        hint = "保持比耶手势 · 正在打开写给你的信";
+        activeLegend = "peace";
+        camMeta = "比耶 · 打开来信";
       } else if (app.gesture === "ok") {
-        status = photoFocused ? "OK · 照片放大" : "OK · 寻找照片";
+        status = photoFocused ? "OK · 照片放大" : "OK · 准星选照片";
         tone = "ok";
         hint = photoFocused
-          ? "照片已居中放大 · 松开 OK 返回星屑，移动掌心可换一张"
-          : "移动掌心，让一张照片来到画面中央，再保持 OK";
+          ? "照片已在准星处放大 · 松开 OK 返回光球"
+          : "移动手掌，把掌心准星移到一张照片上";
         activeLegend = "ok";
-        camMeta = photoFocused ? "OK · 照片放大" : "OK · 居中取景";
+        camMeta = photoFocused ? "OK · 照片放大" : "OK · 准星选取";
       } else if (app.gesture === "open") {
         if (isWaving) {
           status = "挥手 · 随行";
           tone = "wave";
-          hint = "左右挥动 · 星屑与照片追随你的掌心";
+          hint = "左右挥动 · 光球与照片追随你的掌心";
           activeLegend = "wave";
           camMeta = "挥手 · 随行";
         } else {
-          status = "张开 · 星散";
+          status = "张开 · 环绕";
           tone = "open";
-          hint = "照片散在星屑里 · 把一张移到中间，再比 OK 放大";
+          hint = photoAimed
+            ? "准星已对准照片 · 比 OK 原位放大"
+            : "移动手掌 · 用掌心准星对准一张照片";
           activeLegend = "open";
-          camMeta = "张开 · 星散";
+          camMeta = "张开 · 光球环绕";
         }
       } else if (app.gesture === "fist") {
         status = "握拳 · 凝聚";
@@ -2902,7 +3138,7 @@
       } else {
         status = "手势待定";
         tone = "ready";
-        hint = "张开看照片 · OK 放大居中照片 · 点赞打开来信";
+        hint = "张开看照片 · 掌心准星选照片 · OK 原位放大 · 比耶打开来信";
         camMeta = "调整手势";
       }
     } else if (app.mode === "demo") {
@@ -2910,21 +3146,26 @@
         if (isWaving) {
           status = "挥手 · 随行";
           tone = "wave";
-          hint = "左右移动 · 星屑与照片随你而动";
+          hint = "左右移动 · 光球与照片随你而动";
           activeLegend = "wave";
         } else {
-          status = "张开 · 星散";
+          status = "张开 · 环绕";
           tone = "open";
-          hint = "照片散在星屑里 · 左右移动让照片来到中间";
+          hint = photoAimed
+            ? "准星已对准照片 · 摄像头模式下按 OK 原位放大"
+            : "按住拖动 · 把掌心准星移到一张照片上";
           activeLegend = "open";
         }
       } else {
         status = "演示 · 握拳";
         tone = "demo";
-        hint = "按住鼠标 / 手指张开手掌 · 左右移动挥动星屑与照片";
+        hint = "按住鼠标 / 手指张开手掌 · 左右移动挥动光球与照片";
         activeLegend = "fist";
       }
     }
+
+    // 摄像头没能启动时，预览卡会留在界面上提示原因
+    if (cameraCard.classList.contains("failed")) camMeta = "未连接";
 
     const uiKey = [app.mode, status, tone, hint, activeLegend, camMeta, isOpen, isWaving, photoFocused, cameraBtnLabel.textContent].join("|");
     if (uiKey !== lastUiKey) {
@@ -2961,21 +3202,21 @@
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 点赞手势彩蛋 · 黑底白字来信
+  // 比耶手势彩蛋 · 黑底白字来信
   // ─────────────────────────────────────────────────────────────
-  const STORY_TEXT_EXPECTED = "你好，使用者我是河北外国语学院计算机学院26级软件工程学生王泽瑞，非常感谢你看到这句话，对看到这句话的人我将会祝福你们，天天开心，期末必过";
+  const STORY_TEXT_EXPECTED = "你好使用者我是河北外国语学院计算机学院26级软件工程学生王泽瑞非常感谢你看到这句话对看到这句话的人我将会祝福你们天天开心期末必过";
 
   const STORY_MAIN_SPECS = [
-    { className: "greeting", segments: [{ text: "你好，使用者" }] },
+    { className: "greeting", segments: [{ text: "你好使用者" }] },
     { className: "accent-line", segments: [{ text: "我是" }, { text: "河北外国语学院计算机学院", className: "accent" }] },
-    { segments: [{ text: "26级软件工程学生" }, { text: "王泽瑞", className: "name" }, { text: "，" }] },
-    { segments: [{ text: "非常感谢你看到这句话，", className: "soft" }] },
+    { segments: [{ text: "26级软件工程学生" }, { text: "王泽瑞", className: "name" }] },
+    { segments: [{ text: "非常感谢你看到这句话", className: "soft" }] },
     { segments: [{ text: "对看到这句话的人" }] },
-    { segments: [{ text: "我将会祝福你们，" }] }
+    { segments: [{ text: "我将会祝福你们" }] }
   ];
 
   const STORY_BLESS_SPECS = [
-    { segments: [{ text: "天天开心，" }] },
+    { segments: [{ text: "天天开心" }] },
     { segments: [{ text: "期末必过" }] }
   ];
 
@@ -3168,8 +3409,10 @@
     app.mode = "idle";
     app.gesture = "none";
     app.hasHand = false;
-    app.thumbsSince = 0;
+    app.peaceSince = 0;
     app.photoFocusIndex = -1;
+    app.photoFocusHoldUntil = 0;
+    app.photoAimIndex = -1;
     app.photoDebugFocus = -1;
     app.openTarget = 0;
     app.camera.candidate = "none";
@@ -3297,7 +3540,7 @@
       } else {
         cameraBtn.focus({ preventScroll: true });
       }
-      showToast("已返回圣诞树 · 按 O 或竖起大拇指可再次打开来信", 4200);
+      showToast("已返回圣诞树 · 按 O 或比耶可再次打开来信", 4200);
     }, 720);
 
     app.lastFrame = performance.now();
@@ -3405,42 +3648,168 @@
     });
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // 摄像头：逐级降约束、逐台设备重试
+  // NotReadableError（Could not start video source）在 Windows 上多半是
+  // 设备被独占、硬件开关关闭或驱动卡住；换约束 / 换设备 / 稍后重试常能救回来。
+  // ─────────────────────────────────────────────────────────────
+  const CAMERA_BASE_VIDEO = {
+    width: { ideal: 640 },
+    height: { ideal: 480 },
+    frameRate: { ideal: 24, max: 30 }
+  };
+  const CAMERA_DEVICE_KEY = "evergreen.cameraDeviceId";
+  const CAMERA_FRAME_TIMEOUT = 3200;
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  function cameraErrorName(err) {
+    return String((err && (err.name || err.code)) || "");
+  }
+
+  function readSavedCameraId() {
+    try { return localStorage.getItem(CAMERA_DEVICE_KEY) || ""; } catch (err) { return ""; }
+  }
+
+  function saveCameraId(id) {
+    app.camera.deviceId = id || "";
+    try {
+      if (id) localStorage.setItem(CAMERA_DEVICE_KEY, id);
+      else localStorage.removeItem(CAMERA_DEVICE_KEY);
+    } catch (err) {
+      // file:// 或隐私模式下 localStorage 可能不可用，忽略即可
+    }
+  }
+
+  async function listVideoInputs() {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) return [];
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      return devices.filter((device) => device.kind === "videoinput");
+    } catch (err) {
+      console.warn("[EVERGREEN] enumerateDevices failed", err);
+      return [];
+    }
+  }
+
+  function waitForVideoFrames(ms) {
+    return new Promise((resolve) => {
+      if (camVideo.videoWidth > 0) {
+        resolve(true);
+        return;
+      }
+      let done = false;
+      const finish = (ok) => {
+        if (done) return;
+        done = true;
+        clearTimeout(timer);
+        camVideo.removeEventListener("loadeddata", check);
+        camVideo.removeEventListener("playing", check);
+        camVideo.removeEventListener("resize", check);
+        resolve(ok);
+      };
+      const check = () => {
+        if (camVideo.videoWidth > 0) finish(true);
+      };
+      const timer = setTimeout(() => finish(camVideo.videoWidth > 0), ms);
+      camVideo.addEventListener("loadeddata", check);
+      camVideo.addEventListener("playing", check);
+      camVideo.addEventListener("resize", check);
+    });
+  }
+
+  // 打开一条视频流并确认真有画面；失败时自己收尾，方便上层换设备再试
+  async function tryCameraStream(videoConstraints, tag) {
+    let stream = null;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: videoConstraints });
+      app.camera.stream = stream;
+      camVideo.srcObject = stream;
+      try {
+        await camVideo.play();
+      } catch (err) {
+        // 某些浏览器需要用户手势后才会真正 begin playback；点击按钮已满足条件
+        console.warn("[EVERGREEN] video.play()", err);
+      }
+      if (!(await waitForVideoFrames(CAMERA_FRAME_TIMEOUT))) {
+        const err = new Error("no-video-frames");
+        err.name = "NotReadableError";
+        err.code = "no-frames";
+        err.detail = tag;
+        throw err;
+      }
+      return stream;
+    } catch (err) {
+      if (stream) {
+        for (const track of stream.getTracks()) track.stop();
+      }
+      if (!app.camera.stream || app.camera.stream === stream) app.camera.stream = null;
+      camVideo.srcObject = null;
+      throw err;
+    }
+  }
+
   async function openCameraStream() {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       const err = new Error("media-unsupported");
       err.code = "unsupported";
+      err.name = "unsupported";
       throw err;
     }
-    const stream = await navigator.mediaDevices.getUserMedia({
-      audio: false,
-      video: {
-        facingMode: "user",
-        width: { ideal: 640 },
-        height: { ideal: 480 },
-        frameRate: { ideal: 24, max: 30 }
-      }
-    });
-    app.camera.stream = stream;
-    camVideo.srcObject = stream;
-    try {
-      await camVideo.play();
-    } catch (err) {
-      // 某些浏览器需要用户手势后才会真正 begin playback；点击按钮已满足条件
-      console.warn("[EVERGREEN] video.play()", err);
+
+    const preferred = app.camera.deviceId || readSavedCameraId();
+    const devices = await listVideoInputs();
+    // 有 label 说明已经拿到过权限，这时才按设备逐个尝试，避免反复弹权限框
+    const hasLabels = devices.some((device) => !!(device.label && device.label.length));
+
+    const attempts = [];
+    if (preferred) {
+      attempts.push({ tag: "preferred", video: Object.assign({ deviceId: { exact: preferred } }, CAMERA_BASE_VIDEO) });
+      attempts.push({ tag: "preferred-bare", video: { deviceId: { exact: preferred } } });
     }
-    if (!camVideo.videoWidth) {
-      await new Promise((resolve) => {
-        let done = false;
-        const finish = () => {
-          if (done) return;
-          done = true;
-          camVideo.removeEventListener("loadeddata", finish);
-          resolve();
-        };
-        camVideo.addEventListener("loadeddata", finish, { once: true });
-        setTimeout(finish, 2400);
+    attempts.push({ tag: "default", video: Object.assign({ facingMode: "user" }, CAMERA_BASE_VIDEO) });
+    attempts.push({ tag: "default-bare", video: true });
+    if (hasLabels && devices.length > 1) {
+      devices.forEach((device, index) => {
+        if (!device.deviceId || device.deviceId === preferred) return;
+        attempts.push({
+          tag: "device-" + index,
+          video: Object.assign({ deviceId: { exact: device.deviceId } }, CAMERA_BASE_VIDEO)
+        });
       });
     }
+
+    const errors = [];
+    for (let i = 0; i < attempts.length; i++) {
+      // 上一次失败后设备需要一点时间释放，尤其是刚被别的程序放开的 USB 摄像头
+      if (i > 0) await sleep(i < 3 ? 260 : 420);
+      try {
+        const stream = await tryCameraStream(attempts[i].video, attempts[i].tag);
+        const track = stream.getVideoTracks()[0];
+        const settings = track && track.getSettings ? track.getSettings() : {};
+        app.camera.activeDeviceId = (settings && settings.deviceId) || preferred || "";
+        saveCameraId(app.camera.activeDeviceId);
+        return;
+      } catch (err) {
+        errors.push(err);
+        console.warn("[EVERGREEN] camera attempt failed · " + attempts[i].tag, cameraErrorName(err), err && err.message);
+        if (cameraErrorName(err) === "NotAllowedError" || cameraErrorName(err) === "PermissionDeniedError" || cameraErrorName(err) === "SecurityError") {
+          throw err; // 权限被拒绝，换设备也没用
+        }
+      }
+    }
+
+    const informative =
+      errors.find((err) => cameraErrorName(err) === "NotReadableError") ||
+      errors.find((err) => cameraErrorName(err) === "NotFoundError") ||
+      errors[errors.length - 1];
+    if (informative) {
+      informative.cameraAttempts = errors.map((err) => String((err && err.code) || cameraErrorName(err) || "unknown"));
+      throw informative;
+    }
+    throw new Error("camera-start-failed");
   }
 
   function releaseCameraMedia() {
@@ -3464,8 +3833,66 @@
     app.camera.candidate = "none";
     app.camera.candidateFrames = 0;
     app.gesture = "none";
-    app.thumbsSince = 0;
+    app.peaceSince = 0;
     app.photoFocusIndex = -1;
+    app.photoFocusHoldUntil = 0;
+    app.photoAimIndex = -1;
+    hideCameraFailure();
+  }
+
+  function hideCameraFailure() {
+    cameraCard.classList.remove("failed");
+    cameraTools.dataset.open = "0";
+    camTip.hidden = true;
+    camTip.textContent = "";
+  }
+
+  async function refreshCameraDevices() {
+    const devices = await listVideoInputs();
+    const current = app.camera.activeDeviceId || app.camera.deviceId || readSavedCameraId();
+    const previous = camDeviceSelect.value;
+    camDeviceSelect.innerHTML = "";
+    if (!devices.length) {
+      const option = document.createElement("option");
+      option.value = "";
+      option.textContent = "未发现摄像头";
+      camDeviceSelect.appendChild(option);
+      camDeviceSelect.disabled = true;
+    } else {
+      camDeviceSelect.disabled = false;
+      devices.forEach((device, index) => {
+        const option = document.createElement("option");
+        option.value = device.deviceId || "";
+        option.textContent = device.label || "摄像头 " + (index + 1);
+        camDeviceSelect.appendChild(option);
+      });
+      const wanted = current || previous;
+      if (wanted && devices.some((device) => device.deviceId === wanted)) camDeviceSelect.value = wanted;
+    }
+    const failed = cameraCard.classList.contains("failed");
+    cameraTools.dataset.open = failed || devices.length > 1 ? "1" : "0";
+  }
+
+  function markCameraFailure(err, tip) {
+    const name = cameraErrorName(err);
+    const noFrames = String((err && err.code) || "") === "no-frames";
+    app.camera.lastErrorName = name;
+    app.camera.lastErrorDetail = String((err && (err.message || err.detail)) || "");
+    cameraCard.classList.add("visible", "failed");
+    camErrorDetail.textContent = noFrames
+      ? "设备已打开，但始终没有画面"
+      : name === "NotReadableError" || name === "TrackStartError"
+        ? "设备被占用，或硬件开关关闭"
+        : name === "NotFoundError" || name === "DevicesNotFoundError"
+          ? "系统里没有找到可用摄像头"
+          : name === "NotAllowedError" || name === "PermissionDeniedError"
+            ? "浏览器没有得到摄像头权限"
+            : name || "启动失败";
+    camTip.textContent = tip || "";
+    camTip.hidden = !tip;
+    refreshCameraDevices();
+    lastUiKey = "";
+    syncUI(performance.now());
   }
 
   async function startCamera() {
@@ -3475,6 +3902,7 @@
     }
     if (app.mode === "loading") return;
     stopDemo({ silent: true });
+    hideCameraFailure();
     const token = ++app.camera.token;
     app.photoDebugFocus = -1;
     app.mode = "loading";
@@ -3513,9 +3941,10 @@
       app.camera.detecting = true;
       app.camera.lastVideoTime = -1;
       startDetectionLoop();
+      refreshCameraDevices();
       lastUiKey = "";
       syncUI(performance.now());
-      showToast("手势已就绪 · 张开看照片，比 OK 放大，竖大拇指查看来信", 5000);
+      showToast("手势已就绪 · 张开看照片，比 OK 放大，比耶查看来信", 5000);
     } catch (err) {
       console.warn("[EVERGREEN] camera start failed", err);
       if (token !== app.camera.token) return;
@@ -3524,28 +3953,52 @@
       lastUiKey = "";
       syncUI(performance.now());
 
+      const errName = cameraErrorName(err);
+      const errCode = String((err && err.code) || "");
       const rawMsg = String(err && err.message || "");
+      const noFrames = errCode === "no-frames";
       let message = "摄像头没有成功连接。已为你切换到演示模式。";
-      if (err && (err.name === "NotAllowedError" || err.name === "PermissionDeniedError")) {
+      let tip = "检查摄像头是否被占用，或在左下角换一台设备后点重试。";
+      let showPicker = true;
+      if (errName === "NotAllowedError" || errName === "PermissionDeniedError") {
         message = "摄像头权限被拒绝。已切换到演示模式，也可以重新允许权限。";
-      } else if (err && err.name === "NotFoundError") {
+        tip = "点击地址栏左侧的摄像头图标，把权限改成“允许”，再点重试。";
+      } else if (errName === "NotFoundError" || errName === "DevicesNotFoundError") {
         message = "没有找到可用摄像头。已切换到演示模式。";
-      } else if (err && err.name === "NotReadableError") {
-        message = "摄像头正在被其他程序占用。已切换到演示模式。";
+        tip = "确认摄像头没被禁用：ASUS 笔记本可按 F10 打开摄像头；也可以运行 camera-doctor.bat 检查驱动。";
+      } else if (noFrames) {
+        message = "摄像头已打开但没有画面，已切换到演示模式。";
+        tip = "常见原因：硬件开关关闭、被别的程序抢占、驱动卡住。先关掉微信视频 / ToDesk 远程摄像头，再运行 camera-doctor.bat 重置设备。";
+      } else if (errName === "NotReadableError" || errName === "TrackStartError" || errName === "AbortError") {
+        message = "摄像头无法启动，通常是被其他程序占用。已切换到演示模式。";
+        tip = "先关闭微信视频、ToDesk 远程摄像头、会议软件，以及别的浏览器标签里的摄像头，再点重试。";
       } else if (rawMsg.indexOf("local-assets") === 0) {
         message = "本地手势组件缺失，请保持 vendor 文件夹与 HTML 在同一目录。已切换到演示模式。";
+        tip = "";
+        showPicker = false;
       } else if (rawMsg === "needs-http-server") {
         message = "摄像头与手势引擎需要通过本地服务器打开，请使用随附的 start-server.bat。";
+        tip = "";
+        showPicker = false;
       } else if (rawMsg === "local-assets-unreachable") {
         message = "无法读取本地手势组件，请确认 vendor 文件夹完整。已切换到演示模式。";
+        tip = "";
+        showPicker = false;
       } else if (rawMsg === "vision-init-timeout") {
         message = "手势引擎启动超时，已切换到演示模式。可以稍后重试。";
+        tip = "";
+        showPicker = false;
       } else if (rawMsg.indexOf("vision-") === 0 || rawMsg.indexOf("local-") === 0) {
         message = "手势引擎初始化失败，已切换到演示模式。";
+        tip = "";
+        showPicker = false;
       } else if (!navigator.mediaDevices) {
         message = "当前页面无法使用摄像头，请通过 localhost 或 HTTPS 打开。已进入演示模式。";
+        tip = "";
+        showPicker = false;
       }
-      showToast(message, 6200, true);
+      showToast(message, 7200, true);
+      if (showPicker) markCameraFailure(err, tip);
 
       setTimeout(() => {
         if (app.mode === "idle" && !story.open) {
@@ -3586,7 +4039,7 @@
     app.openTarget = 0;
     lastUiKey = "";
     syncUI(performance.now());
-    if (!silent) showToast("演示模式 · 按住鼠标或手指张开，左右移动挥动星屑", 4200);
+    if (!silent) showToast("演示模式 · 按住鼠标或手指张开，左右移动挥动光球", 4200);
   }
 
   function stopDemo(options = {}) {
@@ -3693,24 +4146,33 @@
     const pinch = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y) / palmScale;
     const okRing = pinch < 0.64 && extensions[1] && extensions[2] && extensions[3];
 
-    // 点赞：拇指竖向伸展，其余手指握起。
-    const thumbReach = Math.hypot(lm[4].x - lm[2].x, lm[4].y - lm[2].y) / palmScale;
-    const thumbUpward = (lm[3].y - lm[4].y) / palmScale;
-    const thumbAboveIndex = (lm[5].y - lm[4].y) / palmScale;
-    const otherFingersCurled = !extensions[1] && !extensions[2] && !extensions[3];
-    const thumbsUp = otherFingersCurled && count <= 1 && thumbReach > 0.66 && thumbUpward > 0.1 && thumbAboveIndex > 0.16;
+    // 比耶：食指与中指伸展、分开，无名指和小指弯曲。
+    const lowerFingersCurled = !extensions[2] && !extensions[3];
+    const vIndexX = lm[8].x - lm[5].x;
+    const vIndexY = lm[8].y - lm[5].y;
+    const vMiddleX = lm[12].x - lm[9].x;
+    const vMiddleY = lm[12].y - lm[9].y;
+    const vIndexLen = Math.hypot(vIndexX, vIndexY) || 0.0001;
+    const vMiddleLen = Math.hypot(vMiddleX, vMiddleY) || 0.0001;
+    const vAngle = Math.acos(clamp(
+      (vIndexX * vMiddleX + vIndexY * vMiddleY) / (vIndexLen * vMiddleLen),
+      -1,
+      1
+    ));
+    const vTipGap = Math.hypot(lm[8].x - lm[12].x, lm[8].y - lm[12].y) / palmScale;
+    const peace = extensions[0] && extensions[1] && lowerFingersCurled && vAngle > 0.12 && vTipGap > 0.3;
 
     let gesture = "neutral";
     if (okRing) {
       gesture = "ok";
-    } else if (thumbsUp) {
-      gesture = "thumbs";
+    } else if (peace) {
+      gesture = "peace";
     } else if (count >= 4 || (count === 3 && avgRatio > 1.27 && tipToPalm > 1.18)) {
       gesture = "open";
     } else if (count <= 1 && avgRatio < 1.34) {
       gesture = "fist";
     }
-    return { gesture, count, avgRatio, tipToPalm, pinch, extensions, thumbReach, thumbUpward, thumbAboveIndex, thumbsUp };
+    return { gesture, count, avgRatio, tipToPalm, pinch, extensions, peace, vAngle, vTipGap };
   }
 
   function updateGestureFromLandmarks(lm, now) {
@@ -3718,9 +4180,9 @@
     const candidate = result.gesture;
     const cam = app.camera;
 
-    if (candidate !== "thumbs") app.thumbsSince = 0;
+    if (candidate !== "peace") app.peaceSince = 0;
 
-    if (candidate === "open" || candidate === "fist" || candidate === "ok" || candidate === "thumbs") {
+    if (candidate === "open" || candidate === "fist" || candidate === "ok" || candidate === "peace") {
       if (candidate === cam.candidate) {
         cam.candidateFrames++;
       } else {
@@ -3737,8 +4199,8 @@
         app.lastGestureAt = now;
         if (candidate === "open") {
           app.waveUntil = now + 150;
-        } else if (candidate === "thumbs") {
-          app.thumbsSince = now;
+        } else if (candidate === "peace") {
+          app.peaceSince = now;
         }
       }
     } else {
@@ -3746,7 +4208,7 @@
       if (now - app.lastGestureAt > 620) {
         app.gesture = "none";
       }
-      app.thumbsSince = 0;
+      app.peaceSince = 0;
       cam.candidate = "neutral";
       cam.candidateFrames = 0;
     }
@@ -3868,6 +4330,31 @@
     if (app.mode === "camera") stopCamera(true);
     else startCamera();
   });
+
+  camRetryBtn.addEventListener("click", () => {
+    if (app.mode === "loading" || app.mode === "camera") return;
+    startCamera();
+  });
+
+  camDismissBtn.addEventListener("click", () => {
+    hideCameraFailure();
+    if (app.mode !== "camera" && app.mode !== "loading") cameraCard.classList.remove("visible");
+    lastUiKey = "";
+    syncUI(performance.now());
+  });
+
+  camDeviceSelect.addEventListener("change", () => {
+    saveCameraId(camDeviceSelect.value);
+    if (app.mode === "loading" || app.mode === "camera") return;
+    startCamera();
+  });
+
+  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
+    navigator.mediaDevices.addEventListener("devicechange", () => {
+      if (app.mode === "camera" || app.mode === "loading") return;
+      refreshCameraDevices();
+    });
+  }
 
   demoBtn.addEventListener("click", () => {
     if (app.mode === "loading") return;
@@ -3996,11 +4483,18 @@
         openness: Number(app.openness.toFixed(3)),
         gesture: app.gesture,
         handVisible: app.hand.visible,
+        hand: {
+          x: Number(app.hand.x.toFixed(3)),
+          y: Number(app.hand.y.toFixed(3)),
+          nx: Number(app.hand.nx.toFixed(3)),
+          ny: Number(app.hand.ny.toFixed(3))
+        },
         particles: particles.length,
         hasResults: app.hasResults,
         hasHand: app.hasHand,
-        thumbsSince: Math.round(app.thumbsSince || 0),
+        peaceSince: Math.round(app.peaceSince || 0),
         photoFocusIndex: app.photoFocusIndex,
+        photoAimIndex: app.photoAimIndex,
         photoDebugFocus: app.photoDebugFocus,
         photos: photoCards.map((card) => ({ loaded: card.loaded, focus: Number(card.focus.toFixed(2)) })),
         storyOpen: story.open,
@@ -4071,4 +4565,3 @@
 </script>
 </body>
 </html>
-<!---test--->
